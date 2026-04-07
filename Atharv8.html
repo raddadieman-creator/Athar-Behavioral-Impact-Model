@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>أَثَر — محرك الملخص السلوكي</title>
+<style>
+  /* ── الخطوط والمتغيرات ─────────────────────────── */
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500&display=swap');
+
+  :root {
+    --font: 'IBM Plex Sans Arabic', sans-serif;
+    --bg:        #F8F7F4;
+    --surface:   #FFFFFF;
+    --border:    rgba(0,0,0,0.08);
+    --border-md: rgba(0,0,0,0.14);
+    --text:      #1A1917;
+    --muted:     #6B6963;
+    --hint:      #A09D97;
+    --teal:      #0F6E56;
+    --teal-bg:   #E1F5EE;
+    --teal-txt:  #085041;
+    --amber:     #854F0B;
+    --amber-bg:  #FAEEDA;
+    --amber-txt: #633806;
+    --pink:      #993556;
+    --pink-bg:   #FBEAF0;
+    --pink-txt:  #72243E;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ── حاوية الصفحة ───────────────────────────────── */
+  .page {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+  }
+
+  /* ── الرأس ───────────────────────────────────────── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.75rem;
+  }
+  .logo {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -.01em;
+  }
+  .logo span { color: var(--teal); }
+  .header-sub {
+    font-size: 12px;
+    color: var(--hint);
+  }
+
+  /* ── بطاقة النتيجة الكبيرة ───────────────────────── */
+  .score-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .score-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .score-ring {
+    flex-shrink: 0;
+    position: relative;
+    width: 72px;
+    height: 72px;
+  }
+  .score-ring svg { transform: rotate(-90deg); }
+  .score-ring-num {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 500;
+  }
+  .score-meta { flex: 1; padding-top: 4px; }
+  .score-title {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  /* ── أشرطة المؤشرات الرئيسية ─────────────────────── */
+  .indicators { margin-top: 1rem; }
+  .ind-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 5px;
+  }
+  .ind-label { font-size: 12px; color: var(--muted); }
+  .ind-pct   { font-size: 12px; font-weight: 500; color: var(--text); }
+  .ind-track {
+    height: 6px;
+    background: var(--bg);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .ind-fill {
+    height: 100%;
+    border-radius: 3px;
+    width: 0%;
+    transition: width 1.1s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ── رادار ────────────────────────────────────────── */
+  .radar-section {
+    background: var(--surface);
+    border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .section-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--hint);
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+  .radar-canvas-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: .75rem;
+  }
+
+  /* ── بطاقات الوكلاء ──────────────────────────────── */
+  .agents-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: .75rem;
+    margin-bottom: 1rem;
+  }
+  .agent-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: .9rem 1rem;
+  }
+  .agent-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .agent-name  { font-size: 12px; font-weight: 500; color: var(--text); }
+  .agent-theory{ font-size: 10px; color: var(--hint); }
+  .mini-track {
+    height: 4px;
+    background: var(--bg);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 7px;
+  }
+  .mini-fill {
+    height: 100%;
+    border-radius: 2px;
+    width: 0%;
+    transition: width 1.2s cubic-bezier(.4,0,.2,1);
+  }
+  .agent-num  { font-size: 20px; font-weight: 500; line-height: 1; }
+  .agent-denom{ font-size: 10px; color: var(--hint); margin-top: 2px; }
+
+  /* ── قوائم القوة والتوصيات ───────────────────────── */
+  .list-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-lg);
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .list-card ul { list-style: none; }
+  .list-card li {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 7px 0;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text);
+  }
+  .list-card li:last-child { border-bottom: none; padding-bottom: 0; }
+  .li-icon {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    margin-top: 1px;
+  }
+
+  /* ── زر الإرسال ──────────────────────────────────── */
+  .send-btn {
+    width: 100%;
+    padding: 13px;
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--surface);
+    background: var(--teal);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: opacity .15s;
+    margin-top: .25rem;
+  }
+  .send-btn:hover { opacity: .88; }
+  .send-btn:active { opacity: .75; }
+
+  .note {
+    text-align: center;
+    font-size: 11px;
+    color: var(--hint);
+    margin-top: .75rem;
+  }
+
+  /* ── شاشة التجربة (للعرض فقط) ──────────────────── */
+  .demo-controls {
+    background: var(--surface);
+    border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+  .demo-title { font-size: 13px; color: var(--muted); margin-bottom: 1rem; }
+  .demo-row   { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .demo-btn {
+    padding: 7px 16px;
+    border-radius: var(--radius-sm);
+    border: 0.5px solid var(--border-md);
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background .12s;
+  }
+  .demo-btn:hover { background: #EDEBE6; }
+
+  /* ── حركة الظهور ─────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .anim { animation: fadeUp .4s ease both; }
+  .anim-d1 { animation-delay: .05s; }
+  .anim-d2 { animation-delay: .12s; }
+  .anim-d3 { animation-delay: .18s; }
+  .anim-d4 { animation-delay: .24s; }
+  .anim-d5 { animation-delay: .30s; }
+  .anim-d6 { animation-delay: .36s; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="header">
+    <div class="logo">أَ<span>ثَ</span>ر</div>
+    <div class="header-sub">ملخص السلوك</div>
+  </div>
+
+  <!-- عناصر التجربة — تُحذف عند الدمج الفعلي -->
+  <div class="demo-controls" id="demo-controls">
+    <p class="demo-title">عرض تجريبي — اختر نمطاً لمعاينة الملخص</p>
+    <div class="demo-row">
+      <button class="demo-btn" onclick="demoLoad('good')">نمط جيد</button>
+      <button class="demo-btn" onclick="demoLoad('medium')">بحاجة إلى تعزيز</button>
+      <button class="demo-btn" onclick="demoLoad('low')">غير مستقر</button>
+    </div>
+  </div>
+  <!-- نهاية عناصر التجربة -->
+
+  <div id="summary-root" style="display:none"></div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+
+/* ════════════════════════════════════════════════════════
+   ██  محرك الحساب — SCORING ENGINE
+   ════════════════════════════════════════════════════════
+
+   الاستخدام من الكود الأصلي لمنصة أَثَر:
+   ─────────────────────────────────────────
+   عند انتهاء الطالب من الـ 25 سؤالاً، استدعِ:
+
+       renderBehaviorSummary(answers, studentName);
+
+   حيث answers مصفوفة بهذا الشكل:
+   [
+     { agent: 'awareness',      score: 3, maxScore: 4 },
+     { agent: 'selfControl',    score: 2, maxScore: 4 },
+     { agent: 'guidance',       score: 4, maxScore: 4 },
+     { agent: 'awareness',      score: 3, maxScore: 4 },
+     ...
+   ]
+
+   أو إن كانت إجاباتك بصيغة مختلفة — راجع دالة
+   normalizeAnswers() أدناه وعدّلها لتتوافق مع كودك.
+
+   أسماء الوكلاء (agent):
+     'awareness'   → وكيل الوعي السلوكي      (Bandura)
+     'selfControl' → وكيل الضبط الذاتي       (Skinner)
+     'guidance'    → وكيل الاستجابة للتوجيه  (Vygotsky)
+     'accountability' → وكيل تحمّل المسؤولية (Glasser)
+
+   ════════════════════════════════════════════════════════ */
+
+
+  /* ── 1. نمذجة الأسئلة ──────────────────────────────
+     أربط كل سؤال (بالرقم) بوكيله ووزن إجاباته.
+     عدّل هذا الجدول ليتطابق مع أسئلتك الفعلية.
+     افتراض: كل سؤال له 4 خيارات (أوزان 1–4).
+  ─────────────────────────────────────────────────── */
+  const QUESTION_MAP = {
+    /* وكيل الوعي السلوكي — Bandura (أسئلة 1–7) */
+     1: { agent: 'awareness',       maxScore: 4 },
+     2: { agent: 'awareness',       maxScore: 4 },
+     3: { agent: 'awareness',       maxScore: 4 },
+     4: { agent: 'awareness',       maxScore: 4 },
+     5: { agent: 'awareness',       maxScore: 4 },
+     6: { agent: 'awareness',       maxScore: 4 },
+     7: { agent: 'awareness',       maxScore: 4 },
+    /* وكيل الضبط الذاتي — Skinner (أسئلة 8–13) */
+     8: { agent: 'selfControl',     maxScore: 4 },
+     9: { agent: 'selfControl',     maxScore: 4 },
+    10: { agent: 'selfControl',     maxScore: 4 },
+    11: { agent: 'selfControl',     maxScore: 4 },
+    12: { agent: 'selfControl',     maxScore: 4 },
+    13: { agent: 'selfControl',     maxScore: 4 },
+    /* وكيل الاستجابة للتوجيه — Vygotsky (أسئلة 14–19) */
+    14: { agent: 'guidance',        maxScore: 4 },
+    15: { agent: 'guidance',        maxScore: 4 },
+    16: { agent: 'guidance',        maxScore: 4 },
+    17: { agent: 'guidance',        maxScore: 4 },
+    18: { agent: 'guidance',        maxScore: 4 },
+    19: { agent: 'guidance',        maxScore: 4 },
+    /* وكيل تحمّل المسؤولية — Glasser (أسئلة 20–25) */
+    20: { agent: 'accountability',  maxScore: 4 },
+    21: { agent: 'accountability',  maxScore: 4 },
+    22: { agent: 'accountability',  maxScore: 4 },
+    23: { agent: 'accountability',  maxScore: 4 },
+    24: { agent: 'accountability',  maxScore: 4 },
+    25: { agent: 'accountability',  maxScore: 4 },
+  };
+
+
+  /* ── 2. تحويل الإجابات الخام إلى نتائج لكل وكيل ── */
+  function normalizeAnswers(rawAnswers) {
+    /*
+      rawAnswers: مصفوفة بأحد شكلين —
+
+      الشكل أ) { questionIndex: 1, selectedOption: 3 }
+        حيث selectedOption هو رقم الخيار (1 = الأضعف … 4 = الأقوى)
+
+      الشكل ب) { agent: 'awareness', score: 3, maxScore: 4 }
+        مباشر من الكود الأصلي
+
+      الدالة تعيد:
+      { awareness: {got, max}, selfControl: {got, max},
+        guidance:  {got, max}, accountability: {got, max} }
+    */
+    const acc = {
+      awareness:     { got: 0, max: 0 },
+      selfControl:   { got: 0, max: 0 },
+      guidance:      { got: 0, max: 0 },
+      accountability:{ got: 0, max: 0 },
+    };
+
+    rawAnswers.forEach((ans, idx) => {
+      if (ans.agent && ans.score !== undefined) {
+        /* الشكل ب */
+        if (acc[ans.agent]) {
+          acc[ans.agent].got += ans.score;
+          acc[ans.agent].max += (ans.maxScore || 4);
+        }
+      } else if (ans.questionIndex !== undefined) {
+        /* الشكل أ */
+        const qNum = ans.questionIndex;
+        const map  = QUESTION_MAP[qNum];
+        if (map) {
+          acc[map.agent].got += (ans.selectedOption || 0);
+          acc[map.agent].max += map.maxScore;
+        }
+      } else {
+        /* الشكل الاحتياطي: مصفوفة مرتّبة بدون مفاتيح */
+        const qNum = idx + 1;
+        const map  = QUESTION_MAP[qNum];
+        if (map) {
+          const v = typeof ans === 'number' ? ans : (ans.value || ans.score || 0);
+          acc[map.agent].got += v;
+          acc[map.agent].max += map.maxScore;
+        }
+      }
+    });
+
+    return acc;
+  }
+
+
+  /* ── 3. حساب النسب المئوية ─────────────────────── */
+  function computeScores(agentTotals) {
+    const pct = a => {
+      const d = agentTotals[a];
+      return d.max > 0 ? Math.round((d.got / d.max) * 100) : 0;
+    };
+    const a = pct('awareness');
+    const s = pct('selfControl');
+    const g = pct('guidance');
+    const r = pct('accountability');
+
+    const overall = Math.round((a + s + g + r) / 4);
+
+    /* مؤشرات مشتقة */
+    const commitment   = Math.round((a * .45) + (r * .55));
+    const autonomy     = Math.round((s * .60) + (g * .40));
+    const stability    = Math.round((a * .30) + (s * .40) + (r * .30));
+
+    return { overall, a, s, g, r, commitment, autonomy, stability };
+  }
+
+
+  /* ── 4. تصنيف النمط السلوكي ────────────────────── */
+  function classifyProfile(overall) {
+    if (overall >= 70) return 'good';
+    if (overall >= 45) return 'medium';
+    return 'low';
+  }
+
+
+  /* ── 5. محتوى ديناميكي حسب النمط ─────────────── */
+  const PROFILE_CONTENT = {
+    good: {
+      title:      'نمط سلوكي جيد',
+      badge:      'مستوى جيد',
+      bgBadge:    '#E1F5EE', clrBadge: '#085041',
+      ringColor:  '#1D9E75', trackColor: '#9FE1CB',
+      fillColor:  '#1D9E75',
+      strengths: [
+        'وعي واضح بأنماطك السلوكية ومحفزاتها في معظم المواقف',
+        'قدرة جيدة على ضبط الاستجابات في المواقف الضاغطة',
+        'استعداد ملحوظ للاعتراف بالخطأ والتصحيح الذاتي',
+      ],
+      recs: [
+        'عزّز ثبات سلوكك عبر المواقف المتغيرة — التكرار المقصود يرسّخه',
+        'قلّل الاعتماد على التذكير الخارجي تدريجياً نحو التنظيم الذاتي',
+        'حوّل التغذية الراجعة إلى خطوة تطبيق فعلية في اليوم ذاته',
+      ],
+    },
+    medium: {
+      title:      'نمط بحاجة إلى تعزيز',
+      badge:      'يمكنك التطوير',
+      bgBadge:    '#FAEEDA', clrBadge: '#633806',
+      ringColor:  '#BA7517', trackColor: '#FAC775',
+      fillColor:  '#BA7517',
+      strengths: [
+        'وجود وعي أولي ببعض أنماط السلوك في المواقف المألوفة',
+        'الرغبة في الاستجابة للتوجيه حين تتوفر فرصة واضحة',
+      ],
+      recs: [
+        'ابنِ روتيناً يومياً صغيراً يُعزز الالتزام الذاتي دون تذكير خارجي',
+        'تدرّب على التوقف قبل الاستجابة في المواقف الضاغطة لثوانٍ',
+        'اعمل مع الموجهة على خطة متابعة أسبوعية بهدف واحد قابل للقياس',
+        'حوّل الملاحظات التي تتلقاها إلى خطوات عملية صغيرة ومحددة',
+      ],
+    },
+    low: {
+      title:      'السلوك يحتاج دعماً',
+      badge:      'يحتاج متابعة',
+      bgBadge:    '#FBEAF0', clrBadge: '#72243E',
+      ringColor:  '#D4537E', trackColor: '#F4C0D1',
+      fillColor:  '#D4537E',
+      strengths: [
+        'إتمامك لجلسة التقييم كاملة يعكس استعداداً حقيقياً للمشاركة',
+        'هذه النتائج نقطة انطلاق — وليست حكماً نهائياً على قدراتك',
+      ],
+      recs: [
+        'المتابعة المنتظمة مع الموجهة هي الخطوة الأهم والأقرب الآن',
+        'ابدأ بهدف سلوكي واحد صغير وقابل للملاحظة خلال هذا الأسبوع',
+        'تحدّث مع الموجهة بصراحة — فهم السياق يساعد على الدعم الصحيح',
+        'لا تقارن نتيجتك بالآخرين — التقدم الشخصي هو المعيار الوحيد',
+      ],
+    },
+  };
+
+
+  /* ── 6. بناء واجهة الملخص ──────────────────────── */
+  let radarChart = null;
+
+  function renderBehaviorSummary(rawAnswers, studentName) {
+    const totals  = normalizeAnswers(rawAnswers);
+    const scores  = computeScores(totals);
+    const profile = classifyProfile(scores.overall);
+    const p       = PROFILE_CONTENT[profile];
+
+    const root = document.getElementById('summary-root');
+    root.style.display = 'block';
+    root.innerHTML = buildHTML(scores, p, studentName);
+
+    /* حلقة الرادار */
+    if (radarChart) { radarChart.destroy(); radarChart = null; }
+    radarChart = buildRadar(scores, p.ringColor);
+
+    /* تأخير الأشرطة */
+    setTimeout(() => animateBars(scores, p.fillColor), 150);
+  }
+
+
+  /* ── 7. بناء الـ HTML ─────────────────────────── */
+  function buildHTML(sc, p, name) {
+    const greeting = name ? `ملخصك يا ${name}` : 'ملخصك السلوكي';
+    const agents = [
+      { key: 'a', label: 'الوعي السلوكي',       theory: 'Bandura',  val: sc.a },
+      { key: 's', label: 'الضبط الذاتي',         theory: 'Skinner',  val: sc.s },
+      { key: 'g', label: 'الاستجابة للتوجيه',    theory: 'Vygotsky', val: sc.g },
+      { key: 'r', label: 'تحمّل المسؤولية',      theory: 'Glasser',  val: sc.r },
+    ];
+
+    return `
+    <!-- بطاقة النتيجة الكبيرة -->
+    <div class="score-card anim anim-d1">
+      <div style="font-size:12px;color:var(--hint);margin-bottom:.875rem">${greeting}</div>
+      <div class="score-top">
+        <div class="score-ring">
+          <svg width="72" height="72" viewBox="0 0 72 72">
+            <circle cx="36" cy="36" r="30" fill="none" stroke="#EDEBE6" stroke-width="5"/>
+            <circle cx="36" cy="36" r="30" fill="none"
+              stroke="${p.ringColor}" stroke-width="5"
+              stroke-dasharray="${Math.round(2*Math.PI*30)}"
+              stroke-dashoffset="${Math.round(2*Math.PI*30*(1-sc.overall/100))}"
+              stroke-linecap="round"/>
+          </svg>
+          <div class="score-ring-num" style="color:${p.ringColor}">${sc.overall}%</div>
+        </div>
+        <div class="score-meta">
+          <div class="score-title">${p.title}</div>
+          <span class="badge" style="background:${p.bgBadge};color:${p.clrBadge}">${p.badge}</span>
+        </div>
+      </div>
+
+      <div class="indicators">
+        <div class="ind-label-row">
+          <span class="ind-label">مستوى الالتزام</span>
+          <span class="ind-pct" id="pct-commitment">${sc.commitment}%</span>
+        </div>
+        <div class="ind-track"><div class="ind-fill" id="bar-commitment" style="background:${p.fillColor}"></div></div>
+
+        <div class="ind-label-row">
+          <span class="ind-label">الاستقلالية في الأداء</span>
+          <span class="ind-pct" id="pct-autonomy">${sc.autonomy}%</span>
+        </div>
+        <div class="ind-track"><div class="ind-fill" id="bar-autonomy" style="background:${p.fillColor}"></div></div>
+
+        <div class="ind-label-row">
+          <span class="ind-label">استقرار السلوك</span>
+          <span class="ind-pct" id="pct-stability">${sc.stability}%</span>
+        </div>
+        <div class="ind-track"><div class="ind-fill" id="bar-stability" style="background:${p.fillColor}"></div></div>
+      </div>
+    </div>
+
+    <!-- رادار الوكلاء -->
+    <div class="radar-section anim anim-d2">
+      <div class="section-label">البصمة السلوكية</div>
+      <div class="radar-canvas-wrap">
+        <canvas id="radar-canvas" width="260" height="260"></canvas>
+      </div>
+    </div>
+
+    <!-- بطاقات الوكلاء -->
+    <div class="section-label anim anim-d3" style="margin-bottom:.625rem">أداء الوكلاء الأربعة</div>
+    <div class="agents-grid anim anim-d3">
+      ${agents.map(a => `
+        <div class="agent-card">
+          <div class="agent-header">
+            <span class="agent-name">${a.label}</span>
+            <span class="agent-theory">${a.theory}</span>
+          </div>
+          <div class="mini-track">
+            <div class="mini-fill" id="abar-${a.key}" style="background:${p.fillColor}"></div>
+          </div>
+          <div class="agent-num" style="color:${p.ringColor}">${a.val}%</div>
+          <div class="agent-denom">من 100</div>
+        </div>
+      `).join('')}
+    </div>
+
+    <!-- نقاط القوة -->
+    <div class="list-card anim anim-d4">
+      <div class="section-label">نقاط القوة</div>
+      <ul>
+        ${p.strengths.map(s => `
+          <li>
+            <svg class="li-icon" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="7.25" stroke="${p.ringColor}" stroke-width="1"/>
+              <polyline points="5,8.5 7,10.5 11,6" stroke="${p.ringColor}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>${s}</span>
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+
+    <!-- التوصيات -->
+    <div class="list-card anim anim-d5">
+      <div class="section-label">يمكنك تطوير</div>
+      <ul>
+        ${p.recs.map(r => `
+          <li>
+            <svg class="li-icon" viewBox="0 0 16 16" fill="none">
+              <line x1="3" y1="8" x2="11" y2="8" stroke="${p.fillColor}" stroke-width="1.4" stroke-linecap="round"/>
+              <polyline points="8,5 11,8 8,11" stroke="${p.fillColor}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>${r}</span>
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+
+    <!-- الزر -->
+    <button class="send-btn anim anim-d6" id="send-btn"
+      style="background:${p.ringColor}"
+      onclick="handleSend()">
+      إرسال النتائج إلى الموجهة
+    </button>
+    <p class="note">25 موقفاً سلوكياً تم رصده · النتائج سرية</p>
+    `;
+  }
+
+
+  /* ── 8. رسم الرادار ────────────────────────────── */
+  function buildRadar(sc, color) {
+    const el = document.getElementById('radar-canvas');
+    if (!el) return null;
+    return new Chart(el, {
+      type: 'radar',
+      data: {
+        labels: ['الوعي السلوكي','الضبط الذاتي','الاستجابة للتوجيه','تحمّل المسؤولية'],
+        datasets: [{
+          data: [sc.a, sc.s, sc.g, sc.r],
+          backgroundColor: color + '20',
+          borderColor: color,
+          borderWidth: 1.8,
+          pointBackgroundColor: color,
+          pointRadius: 4,
+          pointBorderWidth: 0,
+        }]
+      },
+      options: {
+        responsive: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          r: {
+            min: 0, max: 100,
+            ticks: {
+              stepSize: 25,
+              color: 'rgba(107,105,99,.55)',
+              font: { size: 10, family: "'IBM Plex Sans Arabic', sans-serif" },
+              backdropColor: 'transparent',
+            },
+            grid:        { color: 'rgba(0,0,0,.07)' },
+            angleLines:  { color: 'rgba(0,0,0,.07)' },
+            pointLabels: {
+              color: 'rgba(26,25,23,.62)',
+              font: { size: 11, family: "'IBM Plex Sans Arabic', sans-serif" }
+            }
+          }
+        }
+      }
+    });
+  }
+
+
+  /* ── 9. تحريك الأشرطة ──────────────────────────── */
+  function animateBars(sc, color) {
+    const bars = [
+      ['bar-commitment', sc.commitment],
+      ['bar-autonomy',   sc.autonomy],
+      ['bar-stability',  sc.stability],
+      ['abar-a',         sc.a],
+      ['abar-s',         sc.s],
+      ['abar-g',         sc.g],
+      ['abar-r',         sc.r],
+    ];
+    bars.forEach(([id, val], i) => {
+      setTimeout(() => {
+        const el = document.getElementById(id);
+        if (el) el.style.width = val + '%';
+      }, i * 60);
+    });
+  }
+
+
+  /* ── 10. إرسال النتائج ─────────────────────────── */
+  function handleSend() {
+    /*
+      هنا تضيفين منطق الإرسال لـ Google Forms الموجود في
+      الكود الأصلي. مثال:
+        submitToGoogleForms(window._atharScores);
+      ثم الانتقال لشاشة التأكيد.
+    */
+    const btn = document.getElementById('send-btn');
+    if (btn) {
+      btn.textContent = 'جارٍ الإرسال…';
+      btn.disabled = true;
+      btn.style.opacity = '.6';
+    }
+    /* استبدلي هذا بالإرسال الفعلي */
+    setTimeout(() => {
+      if (btn) {
+        btn.textContent = 'تم الإرسال ✓';
+        btn.style.background = '#0F6E56';
+      }
+    }, 1200);
+  }
+
+
+  /* ══════════════════════════════════════════════════
+     عرض تجريبي فقط — احذفي هذا الجزء عند الدمج
+     ══════════════════════════════════════════════════ */
+  function demoLoad(profile) {
+    document.getElementById('demo-controls').style.display = 'none';
+
+    const DEMO_DATA = {
+      good:   [
+        {agent:'awareness',      score:3,maxScore:4},{agent:'awareness',      score:4,maxScore:4},
+        {agent:'awareness',      score:3,maxScore:4},{agent:'awareness',      score:4,maxScore:4},
+        {agent:'awareness',      score:3,maxScore:4},{agent:'awareness',      score:4,maxScore:4},
+        {agent:'awareness',      score:3,maxScore:4},
+        {agent:'selfControl',    score:3,maxScore:4},{agent:'selfControl',    score:3,maxScore:4},
+        {agent:'selfControl',    score:4,maxScore:4},{agent:'selfControl',    score:2,maxScore:4},
+        {agent:'selfControl',    score:3,maxScore:4},{agent:'selfControl',    score:3,maxScore:4},
+        {agent:'guidance',       score:2,maxScore:4},{agent:'guidance',       score:3,maxScore:4},
+        {agent:'guidance',       score:3,maxScore:4},{agent:'guidance',       score:2,maxScore:4},
+        {agent:'guidance',       score:3,maxScore:4},{agent:'guidance',       score:2,maxScore:4},
+        {agent:'accountability', score:3,maxScore:4},{agent:'accountability', score:3,maxScore:4},
+        {agent:'accountability', score:2,maxScore:4},{agent:'accountability', score:3,maxScore:4},
+        {agent:'accountability', score:3,maxScore:4},{agent:'accountability', score:2,maxScore:4},
+      ],
+      medium: [
+        {agent:'awareness',      score:2,maxScore:4},{agent:'awareness',      score:3,maxScore:4},
+        {agent:'awareness',      score:2,maxScore:4},{agent:'awareness',      score:2,maxScore:4},
+        {agent:'awareness',      score:3,maxScore:4},{agent:'awareness',      score:2,maxScore:4},
+        {agent:'awareness',      score:2,maxScore:4},
+        {agent:'selfControl',    score:2,maxScore:4},{agent:'selfControl',    score:1,maxScore:4},
+        {agent:'selfControl',    score:2,maxScore:4},{agent:'selfControl',    score:2,maxScore:4},
+        {agent:'selfControl',    score:2,maxScore:4},{agent:'selfControl',    score:2,maxScore:4},
+        {agent:'guidance',       score:2,maxScore:4},{agent:'guidance',       score:1,maxScore:4},
+        {agent:'guidance',       score:2,maxScore:4},{agent:'guidance',       score:2,maxScore:4},
+        {agent:'guidance',       score:1,maxScore:4},{agent:'guidance',       score:2,maxScore:4},
+        {agent:'accountability', score:2,maxScore:4},{agent:'accountability', score:2,maxScore:4},
+        {agent:'accountability', score:1,maxScore:4},{agent:'accountability', score:2,maxScore:4},
+        {agent:'accountability', score:2,maxScore:4},{agent:'accountability', score:2,maxScore:4},
+      ],
+      low: [
+        {agent:'awareness',      score:1,maxScore:4},{agent:'awareness',      score:2,maxScore:4},
+        {agent:'awareness',      score:1,maxScore:4},{agent:'awareness',      score:1,maxScore:4},
+        {agent:'awareness',      score:2,maxScore:4},{agent:'awareness',      score:1,maxScore:4},
+        {agent:'awareness',      score:1,maxScore:4},
+        {agent:'selfControl',    score:1,maxScore:4},{agent:'selfControl',    score:1,maxScore:4},
+        {agent:'selfControl',    score:2,maxScore:4},{agent:'selfControl',    score:1,maxScore:4},
+        {agent:'selfControl',    score:1,maxScore:4},{agent:'selfControl',    score:1,maxScore:4},
+        {agent:'guidance',       score:1,maxScore:4},{agent:'guidance',       score:1,maxScore:4},
+        {agent:'guidance',       score:2,maxScore:4},{agent:'guidance',       score:1,maxScore:4},
+        {agent:'guidance',       score:1,maxScore:4},{agent:'guidance',       score:1,maxScore:4},
+        {agent:'accountability', score:1,maxScore:4},{agent:'accountability', score:1,maxScore:4},
+        {agent:'accountability', score:2,maxScore:4},{agent:'accountability', score:1,maxScore:4},
+        {agent:'accountability', score:1,maxScore:4},{agent:'accountability', score:1,maxScore:4},
+      ],
+    };
+
+    renderBehaviorSummary(DEMO_DATA[profile], 'الطالب');
+  }
+
+</script>
+</body>
+</html>
